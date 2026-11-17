@@ -4,8 +4,204 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    
+<body onload="iniciarJogo()">
+    <h1>Cruzadinha de Arquitetura Computacional</h1>
+    <p class="subtitulo">Clique numa palavra e depois na dica que combina com ela.</p>
+
+    <div id="colunas">
+        <div class="coluna">
+            <h2>Palavras</h2>
+            <div id="colunaPalavras" class="coluna"></div>
+        </div>
+        <div class="coluna">
+            <h2>Dicas</h2>
+            <div id="colunaDicas" class="coluna"></div>
+        </div>
+    </div>
+
+    <div id="botoes">
+        <button onclick="conferir()" id="btnConferir">Conferir</button>
+        <button onclick="reiniciar()" id="btnReiniciar" class="secundario">Reiniciar</button>
+    </div>
+
+    <div id="pontuacao">
+        <span>Quantidade de acertos: <span id="spanCertas"></span></span>
+        <span>Quantidade de erros: <span id="spanErradas"></span></span>
+        <strong id="spanResumo"></strong>
+    </div>
 </body>
+<script>
+    // EDITE AQUI: coloque as suas dicas (máximo de 15 palavras, sem citar a resposta)
+    const listaDePalavras = [
+        { palavra: "CPU", dica: "Dica da CPU" },
+        { palavra: "ULA", dica: "Dica da ULA" },
+        { palavra: "UC", dica: "Dica da UC" },
+        { palavra: "REGISTRADORES", dica: "Dica dos registradores" },
+        { palavra: "RAM", dica: "Dica da RAM" },
+        { palavra: "ROM", dica: "Dica da ROM" },
+        { palavra: "EEPROM", dica: "Dica da EEPROM" },
+        { palavra: "FLASH", dica: "Dica da Flash" },
+        { palavra: "CACHE", dica: "Dica da cache" },
+        { palavra: "MICROCONTROLADOR", dica: "Dica do microcontrolador" },
+        { palavra: "DUALCORE", dica: "Dica do dual core" },
+        { palavra: "QUADCORE", dica: "Dica do quad core" }
+    ]
+
+    // variáveis globais
+    let quantidadeDePalavras = listaDePalavras.length
+    let ordemDasDicas = []        // ordem em que as dicas aparecem (embaralhada)
+    let ligacoes = []             // ligacoes[i] = dica escolhida para a palavra i (ou null)
+    let palavraSelecionada = null
+    let dicaSelecionada = null
+    let conferido = false
+    let certas = 0
+    let erradas = 0
+
+    function iniciarJogo() {
+        ligacoes = []
+        ordemDasDicas = []
+        for (let i = 0; i < quantidadeDePalavras; i++) {
+            ligacoes.push(null)
+            ordemDasDicas.push(i)
+        }
+        ordemDasDicas.sort(() => Math.random() - 0.5) // embaralha
+
+        palavraSelecionada = null
+        dicaSelecionada = null
+        conferido = false
+        certas = 0
+        erradas = 0
+
+        document.getElementById('pontuacao').style.display = "none"
+        document.getElementById('btnConferir').disabled = false
+
+        desenharCards()
+    }
+
+    // devolve qual palavra está ligada a essa dica (ou null)
+    function acharPalavraDaDica(indexDica) {
+        for (let i = 0; i < quantidadeDePalavras; i++) {
+            if (ligacoes[i] === indexDica) {
+                return i
+            }
+        }
+        return null
+    }
+
+    function desenharCards() {
+        const colunaPalavras = document.getElementById('colunaPalavras')
+        const colunaDicas = document.getElementById('colunaDicas')
+        colunaPalavras.innerHTML = ""
+        colunaDicas.innerHTML = ""
+
+        // coluna das palavras
+        for (let i = 0; i < quantidadeDePalavras; i++) {
+            let classes = "card"
+            let numero = ""
+
+            if (ligacoes[i] !== null) {
+                classes += " ligado"
+                numero = i + 1
+            }
+            if (palavraSelecionada === i) {
+                classes += " selecionado"
+            }
+            if (conferido) {
+                classes += ligacoes[i] === i ? " certo" : " errado"
+            }
+
+            colunaPalavras.innerHTML +=
+                `<div class="${classes}" onclick="clicarPalavra(${i})">
+                    <span class="numero">${numero}</span>
+                    <span class="palavra">${listaDePalavras[i].palavra}</span>
+                </div>`
+        }
+
+        // coluna das dicas (na ordem embaralhada)
+        for (let k = 0; k < quantidadeDePalavras; k++) {
+            const j = ordemDasDicas[k]
+            const palavraLigada = acharPalavraDaDica(j)
+            let classes = "card"
+            let numero = ""
+
+            if (palavraLigada !== null) {
+                classes += " ligado"
+                numero = palavraLigada + 1
+            }
+            if (dicaSelecionada === j) {
+                classes += " selecionado"
+            }
+            if (conferido) {
+                classes += palavraLigada === j ? " certo" : " errado"
+            }
+
+            colunaDicas.innerHTML +=
+                `<div class="${classes}" onclick="clicarDica(${j})">
+                    <span class="numero">${numero}</span>
+                    <span>${listaDePalavras[j].dica}</span>
+                </div>`
+        }
+    }
+
+    function clicarPalavra(index) {
+        if (conferido) return
+
+        if (ligacoes[index] !== null) {
+            ligacoes[index] = null // desfaz a ligação
+        } else {
+            palavraSelecionada = index
+            tentarLigar()
+        }
+        desenharCards()
+    }
+
+    function clicarDica(index) {
+        if (conferido) return
+
+        const palavraLigada = acharPalavraDaDica(index)
+        if (palavraLigada !== null) {
+            ligacoes[palavraLigada] = null // desfaz a ligação
+        } else {
+            dicaSelecionada = index
+            tentarLigar()
+        }
+        desenharCards()
+    }
+
+    function tentarLigar() {
+        if (palavraSelecionada !== null && dicaSelecionada !== null) {
+            ligacoes[palavraSelecionada] = dicaSelecionada
+            palavraSelecionada = null
+            dicaSelecionada = null
+        }
+    }
+
+    function conferir() {
+        certas = 0
+        erradas = 0
+
+        for (let i = 0; i < quantidadeDePalavras; i++) {
+            if (ligacoes[i] === i) {
+                certas++
+            } else {
+                erradas++
+            }
+        }
+
+        conferido = true
+        desenharCards()
+
+        document.getElementById('spanCertas').innerHTML = certas
+        document.getElementById('spanErradas').innerHTML = erradas
+        document.getElementById('spanResumo').innerHTML = certas + " de " + quantidadeDePalavras + " palavras"
+        document.getElementById('pontuacao').style.display = "flex"
+        document.getElementById('btnConferir').disabled = true
+    }
+
+    function reiniciar() {
+        iniciarJogo()
+    }
+</script>
 </html>
